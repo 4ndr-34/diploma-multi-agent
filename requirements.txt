@@ -1,0 +1,35 @@
+# Core Dependencies
+PyGithub>=2.1.0          # GitHub API wrapper
+python-dotenv>=1.0.0     # Environment variable management
+
+# LLM Integration
+litellm>=1.0.0           # Unified interface for 100+ LLM providers
+openai>=1.0.0            # OpenAI API client (required by litellm)
+anthropic>=0.18.0        # Anthropic API client (optional, for Claude)
+
+# Web Framework (if using API endpoints)
+fastapi>=0.104.0         # FastAPI for any future web endpoints
+uvicorn>=0.24.0          # ASGI server for FastAPI
+
+# Data Processing
+requests>=2.31.0         # HTTP requests (fallback for direct API calls)
+aiohttp>=3.9.0           # Async HTTP client (optional, for async crawling)
+
+# Testing
+pytest>=7.4.0            # Testing framework
+pytest-cov>=4.1.0        # Code coverage reporting
+pytest-asyncio>=0.21.0   # Async test support
+
+# Utilities
+tqdm>=4.66.0             # Progress bars for batch processing
+tenacity>=8.2.0          # Retry logic for API calls
+python-dateutil>=2.8.2   # Date parsing utilities
+
+# Type Checking (development)
+mypy>=1.7.0              # Static type checking
+types-requests>=2.31.0   # Type stubs for requests
+
+# Code Quality (development)
+black>=23.11.0           # Code formatter
+flake8>=6.1.0            # Linter
+isort>=5.12.0            # Import sorter
