@@ -7,7 +7,12 @@ Quick test to verify the multi-agent architecture works correctly.
 
 import json
 import logging
+import os
+import sys
 from dotenv import load_dotenv
+
+# Add parent directory to path to import project modules
+sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..'))
 
 from crawler.crawler import PRCrawler
 from crawler.llm_integration import LLMIntegrator

@@ -8,6 +8,9 @@ import os
 import sys
 from dotenv import load_dotenv
 
+# Add parent directory to path to import project modules
+sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..'))
+
 load_dotenv()
 
 def test_imports():
