@@ -15,6 +15,7 @@ from .security_agent import SecurityAgent
 from .performance_agent import PerformanceAgent
 from .architecture_agent import ArchitectureAgent
 from .synthesizer import Synthesizer, SynthesizedReport
+from .scoring import WeightProfile
 
 
 logger = logging.getLogger(__name__)
@@ -31,7 +32,13 @@ class MultiAgentOrchestrator:
     4. Invoke synthesizer for final report
     """
     
-    def __init__(self, llm_client, model: str = "gpt-3.5-turbo", parallel: bool = True):
+    def __init__(self, 
+                 llm_client, 
+                 model: str = "gpt-3.5-turbo", 
+                 parallel: bool = True,
+                 use_advanced_scoring: bool = False,
+                 weight_profile: Optional[WeightProfile] = None,
+                 scoring_preset: Optional[str] = None):
         """
         Initialize orchestrator with agents
         
@@ -39,12 +46,17 @@ class MultiAgentOrchestrator:
             llm_client: LLM integration client
             model: Default model for all agents
             parallel: Whether to run agents in parallel (True) or sequential (False)
+            use_advanced_scoring: Use advanced scoring system for prioritization
+            weight_profile: Custom weight profile for advanced scoring
+            scoring_preset: Preset name for advanced scoring ('balanced', 'security_critical', etc.)
         """
         self.llm_client = llm_client
         self.model = model
         self.parallel = parallel
+        self.use_advanced_scoring = use_advanced_scoring
         
-        logger.info(f"Initializing Multi-Agent Orchestrator (parallel={parallel})")
+        logger.info(f"Initializing Multi-Agent Orchestrator (parallel={parallel}, "
+                   f"advanced_scoring={use_advanced_scoring})")
         
         # Initialize agents with specialized configurations
         self.security_agent = SecurityAgent(
@@ -65,8 +77,12 @@ class MultiAgentOrchestrator:
             temperature=0.5  # Medium for balanced architecture suggestions
         )
         
-        # Initialize synthesizer
-        self.synthesizer = Synthesizer()
+        # Initialize synthesizer with scoring configuration
+        self.synthesizer = Synthesizer(
+            use_advanced_scoring=use_advanced_scoring,
+            weight_profile=weight_profile,
+            scoring_preset=scoring_preset
+        )
         
         logger.info("All agents initialized successfully")
     

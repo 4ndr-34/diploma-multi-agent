@@ -6,11 +6,12 @@ This is the critical component that makes multi-agent collaboration effective.
 """
 
 import logging
-from typing import Dict, List, Any, Tuple
+from typing import Dict, List, Any, Tuple, Optional
 from dataclasses import dataclass, field
 from collections import defaultdict
 
 from .base_agent import AgentResponse, Finding, Severity
+from .scoring import AdvancedScorer, WeightProfile, WeightPresets
 
 
 logger = logging.getLogger(__name__)
@@ -81,11 +82,39 @@ class Synthesizer:
     3. Prioritize issues by severity and impact
     4. Generate overall assessment
     5. Produce final unified report
+    
+    Can use either simple priority-based sorting or advanced scoring system.
     """
     
-    def __init__(self):
-        """Initialize synthesizer"""
-        logger.info("Initialized Synthesizer")
+    def __init__(self, 
+                 use_advanced_scoring: bool = False,
+                 weight_profile: Optional[WeightProfile] = None,
+                 scoring_preset: Optional[str] = None):
+        """
+        Initialize synthesizer
+        
+        Args:
+            use_advanced_scoring: Use advanced scoring system instead of simple priority
+            weight_profile: Custom weight profile (only used if use_advanced_scoring=True)
+            scoring_preset: Preset name ('balanced', 'security_critical', etc.)
+                          Ignored if weight_profile is provided
+        """
+        self.use_advanced_scoring = use_advanced_scoring
+        self.scorer = None
+        
+        if use_advanced_scoring:
+            if weight_profile:
+                self.scorer = AdvancedScorer(weight_profile=weight_profile)
+                logger.info("Initialized Synthesizer with custom weight profile")
+            elif scoring_preset:
+                from .scoring import create_scorer
+                self.scorer = create_scorer(preset=scoring_preset)
+                logger.info(f"Initialized Synthesizer with '{scoring_preset}' preset")
+            else:
+                self.scorer = AdvancedScorer()  # Default balanced
+                logger.info("Initialized Synthesizer with default balanced scoring")
+        else:
+            logger.info("Initialized Synthesizer with simple priority-based scoring")
     
     def synthesize(self, 
                    security_response: AgentResponse,
@@ -364,14 +393,120 @@ class Synthesizer:
         else:
             return "Prioritized based on overall impact"
     
+    def _calculate_quality_score(self,
+                                 all_findings: List[Finding],
+                                 critical_count: int,
+                                 high_count: int,
+                                 medium_count: int,
+                                 risk_level: str,
+                                 avg_confidence: float,
+                                 consensus: str) -> float:
+        """
+        Calculate overall PR quality score (0-100%)
+        
+        Scoring logic:
+        - Start at 100 (perfect)
+        - Deduct points based on findings and severity
+        - Adjust based on confidence and consensus
+        - Consider risk level
+        
+        Score ranges:
+        - 90-100: Excellent (A)
+        - 80-89:  Good (B)
+        - 70-79:  Fair (C)
+        - 60-69:  Poor (D)
+        - <60:    Critical (F)
+        
+        Args:
+            all_findings: All findings
+            critical_count: Number of critical findings
+            high_count: Number of high findings
+            medium_count: Number of medium findings
+            risk_level: Overall risk level
+            avg_confidence: Average confidence
+            consensus: Agent consensus level
+            
+        Returns:
+            Quality score (0-100)
+        """
+        # Start with perfect score
+        score = 100.0
+        
+        # Deduct for findings by severity
+        score -= critical_count * 25.0   # Each critical: -25 points
+        score -= high_count * 10.0       # Each high: -10 points
+        score -= medium_count * 3.0      # Each medium: -3 points
+        score -= (len(all_findings) - critical_count - high_count - medium_count) * 0.5  # Low/info: -0.5
+        
+        # Risk level penalty (additional deduction based on overall risk)
+        risk_penalties = {
+            'critical': -15.0,
+            'high': -10.0,
+            'medium': -5.0,
+            'low': 0.0
+        }
+        score += risk_penalties.get(risk_level, 0.0)
+        
+        # Consensus bonus/penalty
+        consensus_adjustments = {
+            'full_agreement': +3.0,      # All agents agree: slight bonus
+            'majority_agreement': 0.0,   # Some agreement: neutral
+            'divergent_opinions': -5.0   # Agents disagree: penalty
+        }
+        score += consensus_adjustments.get(consensus, 0.0)
+        
+        # Confidence adjustment (low confidence = more uncertainty)
+        # If avg confidence < 0.7, apply penalty
+        if avg_confidence < 0.7:
+            confidence_penalty = (0.7 - avg_confidence) * 10  # Up to -7 points
+            score -= confidence_penalty
+        
+        # Bonus for zero critical/high findings
+        if critical_count == 0 and high_count == 0:
+            score += 5.0  # Clean PR bonus
+        
+        # Ensure score stays in 0-100 range
+        score = max(0.0, min(100.0, score))
+        
+        return score
+    
+    def _score_to_grade(self, score: float) -> str:
+        """
+        Convert quality score to letter grade
+        
+        Args:
+            score: Quality score (0-100)
+            
+        Returns:
+            Letter grade (A-F)
+        """
+        if score >= 90:
+            return 'A'
+        elif score >= 80:
+            return 'B'
+        elif score >= 70:
+            return 'C'
+        elif score >= 60:
+            return 'D'
+        else:
+            return 'F'
+    
     def _prioritize_issues(self, findings: List[Finding]) -> List[Dict[str, Any]]:
         """
         Prioritize and rank all issues
         
-        Ranking factors:
+        Uses either simple priority-based ranking or advanced scoring system.
+        
+        Simple ranking factors:
         1. Severity (Critical > High > Medium > Low)
         2. Agent type (Security > Performance > Architecture)
         3. Confidence (Higher confidence first)
+        
+        Advanced scoring considers:
+        - Weighted severity, agent type, confidence
+        - Estimated impact (technical, business, maintenance)
+        - Code complexity and file criticality
+        - Urgency and configurable multipliers
         
         Args:
             findings: All findings from all agents
@@ -379,36 +514,68 @@ class Synthesizer:
         Returns:
             Sorted list of priority issues
         """
-        agent_priority = {'security': 3, 'performance': 2, 'architecture': 1}
-        
-        # Sort findings
-        sorted_findings = sorted(
-            findings,
-            key=lambda f: (
-                self._severity_score(f.severity),
-                agent_priority.get(f.context.get('agent', ''), 0),
-                f.confidence
-            ),
-            reverse=True
-        )
-        
-        # Convert to priority issue format
-        priority_issues = []
-        for i, finding in enumerate(sorted_findings[:20], 1):  # Top 20 issues
-            action = self._determine_action(finding)
+        if self.use_advanced_scoring and self.scorer:
+            # Use advanced scoring system
+            scored_findings = self.scorer.score_findings(findings)
             
-            priority_issues.append({
-                "priority": i,
-                "severity": finding.severity.value,
-                "agent": finding.context.get('agent', 'unknown'),
-                "type": finding.type,
-                "file": finding.file,
-                "line": finding.line,
-                "description": finding.description,
-                "recommendation": finding.recommendation,
-                "action": action,
-                "confidence": finding.confidence
-            })
+            # Convert to priority issue format
+            priority_issues = []
+            for i, (finding, score_dict) in enumerate(scored_findings[:20], 1):
+                action = self._determine_action(finding)
+                
+                priority_issues.append({
+                    "priority": i,
+                    "severity": finding.severity.value,
+                    "agent": finding.context.get('agent', 'unknown'),
+                    "type": finding.type,
+                    "file": finding.file,
+                    "line": finding.line,
+                    "description": finding.description,
+                    "recommendation": finding.recommendation,
+                    "action": action,
+                    "confidence": finding.confidence,
+                    # Add scoring information
+                    "score": round(score_dict['final_score'], 2),
+                    "normalized_score": round(score_dict['normalized_score'], 1),
+                    "score_breakdown": score_dict['breakdown'],
+                    "score_factors": score_dict['factors']
+                })
+            
+            logger.info(f"Prioritized {len(priority_issues)} issues using advanced scoring")
+        else:
+            # Use simple priority-based sorting
+            agent_priority = {'security': 3, 'performance': 2, 'architecture': 1}
+            
+            # Sort findings
+            sorted_findings = sorted(
+                findings,
+                key=lambda f: (
+                    self._severity_score(f.severity),
+                    agent_priority.get(f.context.get('agent', ''), 0),
+                    f.confidence
+                ),
+                reverse=True
+            )
+            
+            # Convert to priority issue format
+            priority_issues = []
+            for i, finding in enumerate(sorted_findings[:20], 1):  # Top 20 issues
+                action = self._determine_action(finding)
+                
+                priority_issues.append({
+                    "priority": i,
+                    "severity": finding.severity.value,
+                    "agent": finding.context.get('agent', 'unknown'),
+                    "type": finding.type,
+                    "file": finding.file,
+                    "line": finding.line,
+                    "description": finding.description,
+                    "recommendation": finding.recommendation,
+                    "action": action,
+                    "confidence": finding.confidence
+                })
+            
+            logger.info(f"Prioritized {len(priority_issues)} issues using simple ranking")
         
         return priority_issues
     
@@ -431,6 +598,12 @@ class Synthesizer:
         """
         Generate overall assessment of the PR
         
+        Includes overall quality score (0-100%) based on:
+        - Severity and count of findings
+        - Agent risk assessments
+        - Average confidence
+        - Agent consensus
+        
         Args:
             security: Security agent response
             performance: Performance agent response
@@ -438,7 +611,7 @@ class Synthesizer:
             all_findings: All findings combined
             
         Returns:
-            Overall assessment dictionary
+            Overall assessment dictionary with quality score
         """
         # Count by severity
         critical_count = sum(1 for f in all_findings if f.severity == Severity.CRITICAL)
@@ -481,6 +654,20 @@ class Synthesizer:
             architecture.confidence * weights['architecture']
         )
         
+        # Get consensus
+        consensus = self._check_consensus(security, performance, architecture)
+        
+        # Calculate overall quality score
+        quality_score = self._calculate_quality_score(
+            all_findings=all_findings,
+            critical_count=critical_count,
+            high_count=high_count,
+            medium_count=medium_count,
+            risk_level=risk_level,
+            avg_confidence=overall_confidence,
+            consensus=consensus
+        )
+        
         return {
             "risk_level": risk_level,
             "readiness": readiness,
@@ -490,7 +677,9 @@ class Synthesizer:
             "critical_findings": critical_count,
             "high_findings": high_count,
             "medium_findings": medium_count,
-            "agents_consensus": self._check_consensus(security, performance, architecture)
+            "agents_consensus": consensus,
+            "quality_score": round(quality_score, 1),
+            "quality_grade": self._score_to_grade(quality_score)
         }
     
     def _check_consensus(self,
@@ -516,3 +705,128 @@ class Synthesizer:
             return "majority_agreement"
         else:
             return "divergent_views"
+    
+    def _calculate_quality_score(self,
+                                 all_findings: List[Finding],
+                                 critical_count: int,
+                                 high_count: int,
+                                 medium_count: int,
+                                 risk_level: str,
+                                 avg_confidence: float,
+                                 consensus: str) -> float:
+        """
+        Calculate overall PR quality score (0-100%)
+        
+        Scoring logic:
+        - Start at 100 (perfect)
+        - Deduct points based on findings and severity
+        - Adjust based on confidence and consensus
+        - Consider risk level
+        
+        Score ranges:
+        - 90-100: Excellent (A) - Clean PR, ready to merge
+        - 80-89:  Good (B) - Minor issues only
+        - 70-79:  Fair (C) - Some concerns, needs review
+        - 60-69:  Poor (D) - Multiple issues, needs work
+        - <60:    Critical (F) - Major problems, needs revision
+        
+        Args:
+            all_findings: All findings
+            critical_count: Number of critical findings
+            high_count: Number of high findings
+            medium_count: Number of medium findings
+            risk_level: Overall risk level
+            avg_confidence: Average confidence
+            consensus: Agent consensus level
+            
+        Returns:
+            Quality score (0-100)
+        """
+        # Start with perfect score
+        score = 100.0
+        
+        # Deduct for findings by severity (progressive penalties)
+        score -= critical_count * 25.0   # Each critical: -25 points (HUGE impact)
+        score -= high_count * 10.0       # Each high: -10 points
+        score -= medium_count * 3.0      # Each medium: -3 points
+        
+        # Low and info findings have minor impact
+        low_info_count = len(all_findings) - critical_count - high_count - medium_count
+        score -= low_info_count * 0.5    # Each low/info: -0.5 points
+        
+        # Risk level penalty (additional deduction)
+        risk_penalties = {
+            'critical': -15.0,
+            'high': -10.0,
+            'medium': -5.0,
+            'low': 0.0
+        }
+        score += risk_penalties.get(risk_level, 0.0)
+        
+        # Consensus adjustment
+        consensus_adjustments = {
+            'full_agreement': +3.0,      # All agents agree: bonus
+            'majority_agreement': 0.0,   # Some agreement: neutral
+            'divergent_views': -5.0      # Agents disagree: penalty
+        }
+        score += consensus_adjustments.get(consensus, 0.0)
+        
+        # Confidence adjustment (low confidence = more uncertainty)
+        if avg_confidence < 0.7:
+            confidence_penalty = (0.7 - avg_confidence) * 10  # Up to -7 points
+            score -= confidence_penalty
+        elif avg_confidence > 0.9:
+            # High confidence bonus
+            score += 2.0
+        
+        # Bonus for zero critical/high findings (clean PR)
+        if critical_count == 0 and high_count == 0:
+            score += 5.0
+        
+        # Extra penalty for many findings (code quality concern)
+        if len(all_findings) > 15:
+            score -= (len(all_findings) - 15) * 0.3  # -0.3 per finding over 15
+        
+        # Ensure score stays in 0-100 range
+        score = max(0.0, min(100.0, score))
+        
+        logger.info(f"Calculated quality score: {score:.1f}% (grade: {self._score_to_grade(score)})")
+        
+        return score
+    
+    def _score_to_grade(self, score: float) -> str:
+        """
+        Convert quality score to letter grade
+        
+        Args:
+            score: Quality score (0-100)
+            
+        Returns:
+            Letter grade with +/- modifiers
+        """
+        if score >= 97:
+            return 'A+'
+        elif score >= 93:
+            return 'A'
+        elif score >= 90:
+            return 'A-'
+        elif score >= 87:
+            return 'B+'
+        elif score >= 83:
+            return 'B'
+        elif score >= 80:
+            return 'B-'
+        elif score >= 77:
+            return 'C+'
+        elif score >= 73:
+            return 'C'
+        elif score >= 70:
+            return 'C-'
+        elif score >= 67:
+            return 'D+'
+        elif score >= 63:
+            return 'D'
+        elif score >= 60:
+            return 'D-'
+        else:
+            return 'F'
