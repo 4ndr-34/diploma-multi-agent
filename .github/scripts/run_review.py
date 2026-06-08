@@ -18,7 +18,7 @@ sys.path.insert(0, str(Path(__file__).parent.parent.parent))
 from dotenv import load_dotenv
 from crawler.crawler import PRCrawler
 from crawler.llm_integration import LLMIntegrator
-from agents import MultiAgentOrchestrator
+from agents import MultiAgentOrchestrator, SingleAgent
 
 # Load environment
 load_dotenv()
@@ -38,6 +38,7 @@ def main():
     parser.add_argument('--pr', required=True, type=int, help='PR number')
     parser.add_argument('--output', required=True, help='Output file path')
     parser.add_argument('--model', default='gpt-3.5-turbo', help='LLM model to use')
+    parser.add_argument('--compare', action='store_true', help='Compare with single agent')
     
     args = parser.parse_args()
     
@@ -54,6 +55,15 @@ def main():
         
         logger.info(f"PR fetched: {pr_data['title']}")
         
+        # Run single agent if comparison requested
+        single_report = None
+        if args.compare:
+            logger.info("Running single agent for comparison...")
+            llm_client_single = LLMIntegrator(model=args.model)
+            single_agent = SingleAgent(llm_client=llm_client_single, model=args.model)
+            single_report = single_agent.analyze(pr_data)
+            logger.info(f"Single agent: {len(single_report.findings)} findings, {single_report.quality_score}% quality")
+        
         # Run multi-agent analysis
         llm_client = LLMIntegrator(model=args.model)
         orchestrator = MultiAgentOrchestrator(
@@ -68,6 +78,7 @@ def main():
         
         # Format results for GitHub Actions
         results = {
+            'comparison_mode': args.compare,
             'pr_number': args.pr,
             'pr_title': pr_data['title'],
             'quality_score': report.overall_assessment['quality_score'],
@@ -84,6 +95,30 @@ def main():
             'agent_summaries': report.agent_summaries,
             'priority_issues': report.priority_issues[:10]  # Top 10
         }
+        
+        # Add comparison data if available
+        if single_report:
+            results['comparison'] = {
+                'single_agent': {
+                    'quality_score': single_report.quality_score,
+                    'quality_grade': single_report.quality_grade,
+                    'findings_count': len(single_report.findings),
+                    'risk_level': single_report.risk_level,
+                    'execution_time': single_report.execution_time
+                },
+                'multi_agent': {
+                    'quality_score': results['quality_score'],
+                    'quality_grade': results['quality_grade'],
+                    'findings_count': results['total_findings'],
+                    'risk_level': results['risk_level'],
+                    'execution_time': results['execution_time']
+                },
+                'advantage': {
+                    'more_findings': results['total_findings'] - len(single_report.findings),
+                    'quality_difference': results['quality_score'] - single_report.quality_score,
+                    'time_overhead': results['execution_time'] - single_report.execution_time
+                }
+            }
         
         # Save results
         with open(args.output, 'w') as f:
