@@ -37,10 +37,15 @@ def main():
     parser.add_argument('--repo', required=True, help='Repository (owner/name)')
     parser.add_argument('--pr', required=True, type=int, help='PR number')
     parser.add_argument('--output', required=True, help='Output file path')
-    parser.add_argument('--model', default='gpt-3.5-turbo', help='LLM model to use')
+    parser.add_argument('--model', default='gpt-3.5-turbo', help='LLM model to use for multi-agent')
+    parser.add_argument('--single-model', default=None, help='LLM model to use for single agent (defaults to --model)')
     parser.add_argument('--compare', action='store_true', help='Compare with single agent')
     
     args = parser.parse_args()
+    
+    # If single-model not specified, use same as multi-agent model
+    if args.single_model is None:
+        args.single_model = args.model
     
     try:
         logger.info(f"Starting review of {args.repo} PR #{args.pr}")
@@ -58,11 +63,11 @@ def main():
         # Run single agent if comparison requested
         single_report = None
         if args.compare:
-            logger.info("Running single agent for comparison...")
-            llm_client_single = LLMIntegrator(model=args.model)
-            single_agent = SingleAgent(llm_client=llm_client_single, model=args.model)
+            logger.info(f"Running single agent for comparison (model: {args.single_model})...")
+            llm_client_single = LLMIntegrator(model=args.single_model)
+            single_agent = SingleAgent(llm_client=llm_client_single, model=args.single_model)
             single_report = single_agent.analyze(pr_data)
-            logger.info(f"Single agent: {len(single_report.findings)} findings, {single_report.quality_score}% quality")
+            logger.info(f"Single agent ({args.single_model}): {len(single_report.findings)} findings, {single_report.quality_score}% quality")
         
         # Run multi-agent analysis
         llm_client = LLMIntegrator(model=args.model)
