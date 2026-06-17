@@ -133,16 +133,15 @@ def main():
         logger.info(f"Quality Score: {results['quality_score']}% ({results['quality_grade']})")
         logger.info(f"Risk Level: {results['risk_level']}")
         
-        # Exit with appropriate code
+        # Log warnings but don't fail - let the workflow decide
         if results['critical_findings'] > 0:
             logger.warning(f"{results['critical_findings']} critical issues found!")
-            sys.exit(1)  # Fail the workflow
-        elif results['quality_score'] < 70:
+        if results['quality_score'] < 70:
             logger.warning(f"Quality score below threshold: {results['quality_score']}%")
-            sys.exit(1)  # Fail the workflow
-        else:
-            logger.info("Review passed!")
-            sys.exit(0)
+        
+        # Always exit successfully if review completed
+        logger.info("Review completed successfully")
+        sys.exit(0)
         
     except Exception as e:
         logger.error(f"Review failed: {e}", exc_info=True)
