@@ -130,6 +130,8 @@ class MultiAgentOrchestrator:
             )
             
             total_time = time.time() - start_time
+            report.execution_time = total_time  # Set the actual total execution time
+            
             logger.info(f"=" * 80)
             logger.info(f"Multi-agent analysis complete in {total_time:.2f}s")
             logger.info(f"Total findings: {len(report.all_findings)}")
