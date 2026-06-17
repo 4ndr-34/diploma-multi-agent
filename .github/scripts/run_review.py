@@ -98,16 +98,31 @@ def main():
             'agents_consensus': report.overall_assessment['agents_consensus'],
             'execution_time': report.execution_time,
             'agent_summaries': report.agent_summaries,
-            'priority_issues': report.priority_issues[:10]  # Top 10
+            'priority_issues': report.priority_issues[:10],  # Top 10 for display
+            'all_findings': report.priority_issues  # All findings for analysis
         }
         
         # Add comparison data if available
         if single_report:
+            # Convert single agent findings to dictionaries
+            single_findings = [
+                {
+                    'title': f.title,
+                    'description': f.description,
+                    'severity': f.severity,
+                    'category': f.category,
+                    'location': f.location,
+                    'recommendation': f.recommendation
+                }
+                for f in single_report.findings
+            ]
+            
             results['comparison'] = {
                 'single_agent': {
                     'quality_score': single_report.quality_score,
                     'quality_grade': single_report.quality_grade,
                     'findings_count': len(single_report.findings),
+                    'findings': single_findings,
                     'risk_level': single_report.risk_level,
                     'execution_time': single_report.execution_time
                 },
