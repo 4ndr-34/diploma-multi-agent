@@ -107,12 +107,15 @@ def main():
             # Convert single agent findings to dictionaries
             single_findings = [
                 {
-                    'title': f.title,
+                    'type': f.type,
+                    'severity': f.severity.value if hasattr(f.severity, 'value') else str(f.severity),
+                    'confidence': f.confidence,
+                    'file': f.file,
+                    'line': f.line,
                     'description': f.description,
-                    'severity': f.severity,
-                    'category': f.category,
-                    'location': f.location,
-                    'recommendation': f.recommendation
+                    'recommendation': f.recommendation,
+                    'code_snippet': f.code_snippet,
+                    'context': f.context
                 }
                 for f in single_report.findings
             ]
