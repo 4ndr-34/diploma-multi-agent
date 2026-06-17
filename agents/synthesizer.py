@@ -404,11 +404,9 @@ class Synthesizer:
         """
         Calculate overall PR quality score (0-100%)
         
-        Scoring logic:
+        Simplified scoring (identical to single agent for fair comparison):
         - Start at 100 (perfect)
-        - Deduct points based on findings and severity
-        - Adjust based on confidence and consensus
-        - Consider risk level
+        - Deduct points based on findings and severity only
         
         Score ranges:
         - 90-100: Excellent (A)
@@ -422,9 +420,9 @@ class Synthesizer:
             critical_count: Number of critical findings
             high_count: Number of high findings
             medium_count: Number of medium findings
-            risk_level: Overall risk level
-            avg_confidence: Average confidence
-            consensus: Agent consensus level
+            risk_level: Overall risk level (not used in scoring)
+            avg_confidence: Average confidence (not used in scoring)
+            consensus: Agent consensus level (not used in scoring)
             
         Returns:
             Quality score (0-100)
@@ -432,38 +430,11 @@ class Synthesizer:
         # Start with perfect score
         score = 100.0
         
-        # Deduct for findings by severity
+        # Deduct for findings by severity (same formula as single agent)
         score -= critical_count * 25.0   # Each critical: -25 points
         score -= high_count * 10.0       # Each high: -10 points
         score -= medium_count * 3.0      # Each medium: -3 points
         score -= (len(all_findings) - critical_count - high_count - medium_count) * 0.5  # Low/info: -0.5
-        
-        # Risk level penalty (additional deduction based on overall risk)
-        risk_penalties = {
-            'critical': -15.0,
-            'high': -10.0,
-            'medium': -5.0,
-            'low': 0.0
-        }
-        score += risk_penalties.get(risk_level, 0.0)
-        
-        # Consensus bonus/penalty
-        consensus_adjustments = {
-            'full_agreement': +3.0,      # All agents agree: slight bonus
-            'majority_agreement': 0.0,   # Some agreement: neutral
-            'divergent_opinions': -5.0   # Agents disagree: penalty
-        }
-        score += consensus_adjustments.get(consensus, 0.0)
-        
-        # Confidence adjustment (low confidence = more uncertainty)
-        # If avg confidence < 0.7, apply penalty
-        if avg_confidence < 0.7:
-            confidence_penalty = (0.7 - avg_confidence) * 10  # Up to -7 points
-            score -= confidence_penalty
-        
-        # Bonus for zero critical/high findings
-        if critical_count == 0 and high_count == 0:
-            score += 5.0  # Clean PR bonus
         
         # Ensure score stays in 0-100 range
         score = max(0.0, min(100.0, score))
@@ -717,11 +688,9 @@ class Synthesizer:
         """
         Calculate overall PR quality score (0-100%)
         
-        Scoring logic:
+        Simplified scoring (identical to single agent for fair comparison):
         - Start at 100 (perfect)
-        - Deduct points based on findings and severity
-        - Adjust based on confidence and consensus
-        - Consider risk level
+        - Deduct points based on findings and severity only
         
         Score ranges:
         - 90-100: Excellent (A) - Clean PR, ready to merge
@@ -735,9 +704,9 @@ class Synthesizer:
             critical_count: Number of critical findings
             high_count: Number of high findings
             medium_count: Number of medium findings
-            risk_level: Overall risk level
-            avg_confidence: Average confidence
-            consensus: Agent consensus level
+            risk_level: Overall risk level (not used in scoring)
+            avg_confidence: Average confidence (not used in scoring)
+            consensus: Agent consensus level (not used in scoring)
             
         Returns:
             Quality score (0-100)
@@ -745,47 +714,14 @@ class Synthesizer:
         # Start with perfect score
         score = 100.0
         
-        # Deduct for findings by severity (progressive penalties)
-        score -= critical_count * 25.0   # Each critical: -25 points (HUGE impact)
+        # Deduct for findings by severity (same formula as single agent)
+        score -= critical_count * 25.0   # Each critical: -25 points
         score -= high_count * 10.0       # Each high: -10 points
         score -= medium_count * 3.0      # Each medium: -3 points
         
         # Low and info findings have minor impact
         low_info_count = len(all_findings) - critical_count - high_count - medium_count
         score -= low_info_count * 0.5    # Each low/info: -0.5 points
-        
-        # Risk level penalty (additional deduction)
-        risk_penalties = {
-            'critical': -15.0,
-            'high': -10.0,
-            'medium': -5.0,
-            'low': 0.0
-        }
-        score += risk_penalties.get(risk_level, 0.0)
-        
-        # Consensus adjustment
-        consensus_adjustments = {
-            'full_agreement': +3.0,      # All agents agree: bonus
-            'majority_agreement': 0.0,   # Some agreement: neutral
-            'divergent_views': -5.0      # Agents disagree: penalty
-        }
-        score += consensus_adjustments.get(consensus, 0.0)
-        
-        # Confidence adjustment (low confidence = more uncertainty)
-        if avg_confidence < 0.7:
-            confidence_penalty = (0.7 - avg_confidence) * 10  # Up to -7 points
-            score -= confidence_penalty
-        elif avg_confidence > 0.9:
-            # High confidence bonus
-            score += 2.0
-        
-        # Bonus for zero critical/high findings (clean PR)
-        if critical_count == 0 and high_count == 0:
-            score += 5.0
-        
-        # Extra penalty for many findings (code quality concern)
-        if len(all_findings) > 15:
-            score -= (len(all_findings) - 15) * 0.3  # -0.3 per finding over 15
         
         # Ensure score stays in 0-100 range
         score = max(0.0, min(100.0, score))
