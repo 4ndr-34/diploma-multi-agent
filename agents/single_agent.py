@@ -91,19 +91,15 @@ class SingleAgent:
         
         try:
             # Build comprehensive prompt
-            prompt = self._build_comprehensive_prompt(pr_data)
+            user_prompt = self._build_comprehensive_prompt(pr_data)
             
-            # Call LLM
+            # Build full prompt with system instructions
+            system_prompt = self._get_system_prompt()
+            full_prompt = f"{system_prompt}\n\n{user_prompt}"
+            
+            # Call LLM directly
             logger.info(f"Calling {self.model} for comprehensive review...")
-            response = self.llm_client.analyze_pr(
-                pr_data,
-                formatter=None,
-                include_full_diff=True,
-                system_prompt=self._get_system_prompt(),
-                custom_prompt=prompt,
-                temperature=self.temperature,
-                max_tokens=4000
-            )
+            response = self.llm_client._call_llm(full_prompt)
             
             # Parse response
             findings = self._parse_response(response)
