@@ -1,0 +1,219 @@
+﻿================================================================================
+COMPARATIVE ANALYSIS: MULTI-AGENT VS SINGLE-AGENT
+================================================================================
+Loading review results...
+Γ£ô Loaded 20 PR reviews
+
+================================================================================
+CONSENSUS ANALYSIS
+================================================================================
+PR #10:
+  Both found: 0
+  Only Multi: 3
+  Only Single: 16
+  Consensus Rate: 0.00%
+PR #11:
+  Both found: 0
+  Only Multi: 3
+  Only Single: 15
+  Consensus Rate: 0.00%
+PR #12:
+  Both found: 0
+  Only Multi: 5
+  Only Single: 0
+  Consensus Rate: 0.00%
+PR #13:
+  Both found: 0
+  Only Multi: 5
+  Only Single: 16
+  Consensus Rate: 0.00%
+PR #14:
+  Both found: 0
+  Only Multi: 4
+  Only Single: 10
+  Consensus Rate: 0.00%
+PR #15:
+  Both found: 0
+  Only Multi: 6
+  Only Single: 15
+  Consensus Rate: 0.00%
+PR #16:
+  Both found: 0
+  Only Multi: 6
+  Only Single: 0
+  Consensus Rate: 0.00%
+PR #17:
+  Both found: 0
+  Only Multi: 3
+  Only Single: 14
+  Consensus Rate: 0.00%
+PR #18:
+  Both found: 0
+  Only Multi: 4
+  Only Single: 0
+  Consensus Rate: 0.00%
+PR #19:
+  Both found: 0
+  Only Multi: 4
+  Only Single: 10
+  Consensus Rate: 0.00%
+PR #20:
+  Both found: 0
+  Only Multi: 4
+  Only Single: 15
+  Consensus Rate: 0.00%
+PR #21:
+  Both found: 0
+  Only Multi: 7
+  Only Single: 16
+  Consensus Rate: 0.00%
+PR #22:
+  Both found: 0
+  Only Multi: 3
+  Only Single: 12
+  Consensus Rate: 0.00%
+PR #3:
+  Both found: 0
+  Only Multi: 3
+  Only Single: 14
+  Consensus Rate: 0.00%
+PR #4:
+  Both found: 0
+  Only Multi: 5
+  Only Single: 15
+  Consensus Rate: 0.00%
+PR #5:
+  Both found: 0
+  Only Multi: 4
+  Only Single: 15
+  Consensus Rate: 0.00%
+PR #6:
+  Both found: 0
+  Only Multi: 6
+  Only Single: 17
+  Consensus Rate: 0.00%
+PR #7:
+  Both found: 0
+  Only Multi: 4
+  Only Single: 13
+  Consensus Rate: 0.00%
+PR #8:
+  Both found: 0
+  Only Multi: 3
+  Only Single: 12
+  Consensus Rate: 0.00%
+PR #9:
+  Both found: 0
+  Only Multi: 5
+  Only Single: 17
+  Consensus Rate: 0.00%
+
+≡ƒôè Average Consensus Rate: 0.00%
+
+================================================================================
+SPECIFICITY ANALYSIS
+================================================================================
+Multi-Agent Avg Specificity: 0.669
+Single-Agent Avg Specificity: 0.647
+Difference: 0.022
+
+================================================================================
+CONSISTENCY ANALYSIS
+================================================================================
+
+Performance:
+  Multi-Agent Std Dev: 8.49
+  Single-Agent Std Dev: 16.70
+  Multi-Agent Mean: 79.5
+  Single-Agent Mean: 12.1
+
+Architecture:
+  Multi-Agent Std Dev: 7.02
+  Single-Agent Std Dev: 35.75
+  Multi-Agent Mean: 80.6
+  Single-Agent Mean: 48.0
+
+Bug/Regression:
+  Multi-Agent Std Dev: 10.02
+  Single-Agent Std Dev: 50.00
+  Multi-Agent Mean: 75.2
+  Single-Agent Mean: 50.0
+
+Clean Code:
+  Multi-Agent Std Dev: 8.73
+  Single-Agent Std Dev: 22.49
+  Multi-Agent Mean: 75.0
+  Single-Agent Mean: 23.6
+
+Security:
+  Multi-Agent Std Dev: 9.98
+  Single-Agent Std Dev: 17.20
+  Multi-Agent Mean: 74.4
+  Single-Agent Mean: 16.6
+
+================================================================================
+SPECIALIZATION ANALYSIS
+================================================================================
+
+Security PRs:
+  Multi-Agent relevant findings: 4/18 (22.2%)
+  Single-Agent total findings: 61
+
+Performance PRs:
+  Multi-Agent relevant findings: 5/15 (33.3%)
+  Single-Agent total findings: 58
+
+Architecture PRs:
+  Multi-Agent relevant findings: 8/19 (42.1%)
+  Single-Agent total findings: 43
+
+Bug/Regression PRs:
+  Multi-Agent relevant findings: 0/20 (0.0%)
+  Single-Agent total findings: 31
+
+Clean Code PRs:
+  Multi-Agent relevant findings: 0/18 (0.0%)
+  Single-Agent total findings: 53
+
+================================================================================
+QUALITY SCORE COMPARISON
+================================================================================
+Multi-Agent Mean: 77.0%
+Single-Agent Mean: 30.1%
+Multi-Agent Median: 75.5%
+Single-Agent Median: 15.8%
+Multi-Agent Std: 9.3
+Single-Agent Std: 35.0
+
+Correlation: 0.371
+
+================================================================================
+EXECUTION TIME COMPARISON
+================================================================================
+Multi-Agent Avg Time: 4.4s
+Single-Agent Avg Time: 56.1s
+Time Overhead: -92.2%
+
+================================================================================
+GENERATING VISUALIZATIONS
+================================================================================
+Γ£ô Generated quality_scores_comparison.png
+Γ£ô Generated category_performance.png
+Γ£ô Generated findings_distribution.png
+Γ£ô Generated execution_time.png
+
+Γ£ô Visualizations saved to analysis_output/
+
+================================================================================
+GENERATING LATEX TABLE
+================================================================================
+Γ£ô Generated comparison_table.tex
+
+================================================================================
+ANALYSIS COMPLETE
+================================================================================
+
+Generated files:
+  - analysis_output/ (visualizations)
+  - comparison_table.tex (for thesis)
+  - analysis_summary.json (raw data)
